@@ -1,0 +1,49 @@
+# =========================================================
+# PHASE 3: EXPORTING
+# =========================================================
+def export_results(df):
+    """
+    Export the final results to CSV and JSON files.
+
+    Args:
+        df (DataFrame): Final dataset
+    """
+    df.to_csv("forensics_results.csv", index=False)
+    df.to_json("forensics_results.json", orient="records", indent=4)
+    print("Results exported to forensics_results.csv and forensics_results.json")
+
+
+# =========================================================
+# PHASE 4: AI ANOMALY DETECTION
+# =========================================================
+def detect_anomalies(df):
+    """
+    Use Isolation Forest to detect suspicious files based on metadata.
+
+    Args:
+        df (DataFrame): Dataset containing metadata and hashes
+
+    Returns:
+        DataFrame: Dataset with anomaly scores and labels
+    """
+    encoder = LabelEncoder()
+    df["file_type_encoded"] = encoder.fit_transform(df["file_type"])
+
+    features = df[[
+        "size_bytes",
+        "created_hour",
+        "modified_hour",
+        "accessed_hour",
+        "path_depth",
+        "file_type_encoded"
+    ]]
+
+    model = IsolationForest(contamination=0.05, random_state=42)
+    df["anomaly_label"] = model.fit_predict(features)
+    df["anomaly_score"] = model.decision_function(features)
+
+    df["status"] = df["anomaly_label"].apply(
+        lambda x: "Suspicious" if x == -1 else "Normal"
+    )
+
+    return df

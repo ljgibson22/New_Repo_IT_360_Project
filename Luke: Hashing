@@ -1,0 +1,50 @@
+# =========================================================
+# PHASE 2: HASHING
+# =========================================================
+def calculate_hashes(file_path):
+    """
+    Generate MD5, SHA-1, and SHA-256 hashes for a file.
+
+    Args:
+        file_path (str): Path to the file
+
+    Returns:
+        tuple: MD5, SHA-1, and SHA-256 hash values
+    """
+    md5 = hashlib.md5()
+    sha1 = hashlib.sha1()
+    sha256 = hashlib.sha256()
+
+    with open(file_path, "rb") as f:
+        while chunk := f.read(8192):
+            md5.update(chunk)
+            sha1.update(chunk)
+            sha256.update(chunk)
+
+    return md5.hexdigest(), sha1.hexdigest(), sha256.hexdigest()
+
+
+def add_hashes(records):
+    """
+    Add cryptographic hash values to extracted metadata records.
+
+    Args:
+        records (list): Metadata records
+
+    Returns:
+        DataFrame: Metadata records with hash values added
+    """
+    for record in records:
+        try:
+            md5, sha1, sha256 = calculate_hashes(record["file_path"])
+            record["md5"] = md5
+            record["sha1"] = sha1
+            record["sha256"] = sha256
+        except Exception as e:
+            record["md5"] = None
+            record["sha1"] = None
+            record["sha256"] = None
+            print(f"Hashing error for {record['file_path']}: {e}")
+
+    return pd.DataFrame(records)
+

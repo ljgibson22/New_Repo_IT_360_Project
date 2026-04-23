@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Output reports (generated files)
+output/
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Optional: logs
+*.log

@@ -1,0 +1,41 @@
+# =========================================================
+# PHASE 1: EXTRACTION
+# =========================================================
+def extract_metadata(folder_path):
+    """
+    Extract basic metadata from all files in the evidence folder.
+
+    Args:
+        folder_path (str): Path to the evidence directory
+
+    Returns:
+        list: A list of dictionaries containing file metadata
+    """
+    records = []
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            file_path = Path(root) / file
+
+            try:
+                stat = file_path.stat()
+
+                created = datetime.fromtimestamp(stat.st_ctime)
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                accessed = datetime.fromtimestamp(stat.st_atime)
+
+                records.append({
+                    "file_name": file_path.name,
+                    "file_path": str(file_path),
+                    "file_type": file_path.suffix.lower() if file_path.suffix else "none",
+                    "size_bytes": stat.st_size,
+                    "created_hour": created.hour,
+                    "modified_hour": modified.hour,
+                    "accessed_hour": accessed.hour,
+                    "path_depth": len(file_path.parts)
+                })
+
+            except Exception as e:
+                print(f"Metadata extraction error for {file_path}: {e}")
+
+    return records

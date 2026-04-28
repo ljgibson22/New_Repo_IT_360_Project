@@ -7,6 +7,8 @@ __pycache__/
 
 # Output reports (generated files)
 output/
+forensics_results.csv
+forensics_results.json
 
 # OS junk files
 .DS_Store

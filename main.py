@@ -1,0 +1,191 @@
+"""
+Disk Image Metadata & Hashing Analyzer with AI Anomaly Detection
+
+This script is divided into four phases:
+1. Extraction Phase   - Collect file metadata
+2. Hashing Phase      - Generate MD5, SHA-1, and SHA-256 hashes
+3. Exporting Phase    - Save results to CSV and JSON
+4. AI Phase           - Detect unusual files using Isolation Forest
+"""
+
+import os
+import hashlib
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import LabelEncoder
+
+
+# =========================================================
+# PHASE 1: EXTRACTION
+# =========================================================
+def extract_metadata(folder_path):
+    """
+    Extract basic metadata from all files in the evidence folder.
+
+    Args:
+        folder_path (str): Path to the evidence directory
+
+    Returns:
+        list: A list of dictionaries containing file metadata
+    """
+    records = []
+
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            file_path = Path(root) / file
+
+            try:
+                stat = file_path.stat()
+
+                created = datetime.fromtimestamp(stat.st_ctime)
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                accessed = datetime.fromtimestamp(stat.st_atime)
+
+                records.append({
+                    "file_name": file_path.name,
+                    "file_path": str(file_path),
+                    "file_type": file_path.suffix.lower() if file_path.suffix else "none",
+                    "size_bytes": stat.st_size,
+                    "created_hour": created.hour,
+                    "modified_hour": modified.hour,
+                    "accessed_hour": accessed.hour,
+                    "path_depth": len(file_path.parts)
+                })
+
+            except Exception as e:
+                print(f"Metadata extraction error for {file_path}: {e}")
+
+    return records
+
+
+# =========================================================
+# PHASE 2: HASHING
+# =========================================================
+def calculate_hashes(file_path):
+    """
+    Generate MD5, SHA-1, and SHA-256 hashes for a file.
+
+    Args:
+        file_path (str): Path to the file
+
+    Returns:
+        tuple: MD5, SHA-1, and SHA-256 hash values
+    """
+    md5 = hashlib.md5()
+    sha1 = hashlib.sha1()
+    sha256 = hashlib.sha256()
+
+    with open(file_path, "rb") as f:
+        while chunk := f.read(8192):
+            md5.update(chunk)
+            sha1.update(chunk)
+            sha256.update(chunk)
+
+    return md5.hexdigest(), sha1.hexdigest(), sha256.hexdigest()
+
+
+def add_hashes(records):
+    """
+    Add cryptographic hash values to extracted metadata records.
+
+    Args:
+        records (list): Metadata records
+
+    Returns:
+        DataFrame: Metadata records with hash values added
+    """
+    for record in records:
+        try:
+            md5, sha1, sha256 = calculate_hashes(record["file_path"])
+            record["md5"] = md5
+            record["sha1"] = sha1
+            record["sha256"] = sha256
+        except Exception as e:
+            record["md5"] = None
+            record["sha1"] = None
+            record["sha256"] = None
+            print(f"Hashing error for {record['file_path']}: {e}")
+
+    return pd.DataFrame(records)
+
+
+# =========================================================
+# PHASE 3: EXPORTING
+# =========================================================
+def export_results(df):
+    """
+    Export the final results to CSV and JSON files.
+
+    Args:
+        df (DataFrame): Final dataset
+    """
+    df.to_csv("forensics_results.csv", index=False)
+    df.to_json("forensics_results.json", orient="records", indent=4)
+    print("Results exported to forensics_results.csv and forensics_results.json")
+
+
+# =========================================================
+# PHASE 4: AI ANOMALY DETECTION
+# =========================================================
+def detect_anomalies(df):
+    """
+    Use Isolation Forest to detect suspicious files based on metadata.
+
+    Args:
+        df (DataFrame): Dataset containing metadata and hashes
+
+    Returns:
+        DataFrame: Dataset with anomaly scores and labels
+    """
+    encoder = LabelEncoder()
+    df["file_type_encoded"] = encoder.fit_transform(df["file_type"])
+
+    features = df[[
+        "size_bytes",
+        "created_hour",
+        "modified_hour",
+        "accessed_hour",
+        "path_depth",
+        "file_type_encoded"
+    ]]
+
+    model = IsolationForest(contamination=0.05, random_state=42)
+    df["anomaly_label"] = model.fit_predict(features)
+    df["anomaly_score"] = model.decision_function(features)
+
+    df["status"] = df["anomaly_label"].apply(
+        lambda x: "Suspicious" if x == -1 else "Normal"
+    )
+
+    return df
+
+
+# =========================================================
+# MAIN PROGRAM
+# =========================================================
+def main():
+    """
+    Run all four phases of the forensic analyzer.
+    """
+    folder_path = "evidence_folder"  # Change this to your evidence folder
+
+    # Phase 1: Extract metadata
+    records = extract_metadata(folder_path)
+
+    # Phase 2: Add hashes
+    df = add_hashes(records)
+
+    # Phase 4: AI anomaly detection
+    df = detect_anomalies(df)
+
+    # Phase 3: Export results
+    export_results(df)
+
+    # Show a summary
+    print(df[["file_name", "file_type", "size_bytes", "anomaly_score", "status"]])
+
+
+if __name__ == "__main__":
+    main()

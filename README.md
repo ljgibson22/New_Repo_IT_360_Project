@@ -17,5 +17,3 @@ Results are exported in formats such as CSV or JSON, making them suitable for fo
 This project demonstrates core digital forensics principles including evidence integrity, repeatability, and documentation, while also providing functions similar to professional forensic tools in a transparent and educational format.
 
 To enhance the system, we will be adding an AI-based anomaly detection module using scikit-learn. This module will analyze extracted file metadata (like file size, timestamps, and file types) to identify unusual patterns that might indicate suspicious or tampered files. By applying a learning algorithm such as Isolation Forest, the system will automatically find anomalies without training data. This adds a layer of analysis to assist investigators in more effectively identifying evidence beyond standard metadata inspection.
-<img width="1242" height="2208" alt="IMG_8665" src="https://github.com/user-attachments/assets/0ba7df26-c5d4-47c4-89a5-13e67b49cc88" />
-<img width="1242" height="2208" alt="IMG_8666" src="https://github.com/user-attachments/assets/3894f2ab-bca6-4281-978e-d27ef56771fe" />
